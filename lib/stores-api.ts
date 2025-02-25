@@ -111,32 +111,78 @@ export async function getStoresProducts(): Promise<StoresProduct[]> {
 
 // Optional: Add function to fetch a single product
 export async function getStoresProduct(productId: string): Promise<StoresProduct | null> {
-  if (!process.env.STORES_API_KEY) {
-    console.error('STORES_API_KEY is not set in environment variables');
-    return null;
-  }
-
   try {
-    const url = `https://api.stores.dev/retail/202211/items/${productId}`;
+    if (!process.env.STORES_API_KEY || !process.env.STORES_SHOP_ID) {
+      console.error('Missing required environment variables:', {
+        hasApiKey: !!process.env.STORES_API_KEY,
+        hasShopId: !!process.env.STORES_SHOP_ID
+      });
+      return null;
+    }
+
+    // Log the request details
+    console.log('Fetching product with:', {
+      productId,
+      shopId: process.env.STORES_SHOP_ID,
+      hasApiKey: !!process.env.STORES_API_KEY
+    });
+
+    // First try to get all products and find the specific one
+    const products = await getStoresProducts();
+    const product = products.find(p => p.id === productId);
+
+    if (product) {
+      console.log('Found product in list:', {
+        id: product.id,
+        name: product.name
+      });
+      return product;
+    }
+
+    console.log('Product not found in list, trying direct fetch');
     
+    // If not found, try direct fetch (though this might not be supported based on the OpenAPI spec)
+    const url = `https://api.stores.dev/retail/202211/shops/${process.env.STORES_SHOP_ID}/items/${productId}`;
+    console.log('Request URL:', url);
+
     const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${process.env.STORES_API_KEY}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      next: { revalidate: 60 }
+      cache: 'no-store'
+    });
+
+    // Log response details
+    console.log('Response details:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch product: ${response.status}`);
+      const errorText = await response.text();
+      console.error('API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+        productId
+      });
+      return null;
     }
 
-    const product = await response.json();
-    return product;
+    const data = await response.json();
+    return data;
 
   } catch (error) {
-    console.error('Error fetching single product:', error);
+    console.error('Detailed error in getStoresProduct:', {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      productId
+    });
     return null;
   }
 } 

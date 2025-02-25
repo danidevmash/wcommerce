@@ -1,4 +1,5 @@
 import Hero from '@/app/components/Hero';
+import Link from 'next/link';
 import { getStoresProducts } from '../lib/stores-api';
 
 export default async function HomePage() {
@@ -31,7 +32,11 @@ export default async function HomePage() {
           <h2 className="text-3xl font-bold mb-8">Our Products</h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {products.map((product) => (
-              <div key={product.id} className="border p-4 rounded shadow-sm hover:shadow-md transition-shadow">
+              <Link 
+                key={product.id} 
+                href={`/product/${product.id}`}
+                className="border p-4 rounded shadow-sm hover:shadow-md transition-shadow"
+              >
                 {product.image_urls[0] && (
                   <img 
                     src={product.image_urls[0]} 
@@ -45,8 +50,10 @@ export default async function HomePage() {
                     ¥{product.variations[0].sales_price.toLocaleString()}
                   </p>
                 )}
-                <p className="mt-2 text-sm text-gray-600 line-clamp-2">{product.description}</p>
-              </div>
+                <p className="mt-2 text-sm text-gray-600 line-clamp-2">
+                  {product.description}
+                </p>
+              </Link>
             ))}
           </div>
         </div>
