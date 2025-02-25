@@ -1,12 +1,10 @@
 "use client";
 
+import { useCartActions } from "@/app/components/cart/context";
+import type { StoresProduct } from "@/lib/stores-api";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
-import { addItem } from "components/cart/actions";
-import { useProduct } from "components/product/product-context";
-import type { Product, ProductVariant } from "lib/shopify/types";
-import { useActionState } from "react";
-import { useCart } from "./cart-context";
+import { useState } from "react";
 
 function SubmitButton({
 	availableForSale,
@@ -21,7 +19,7 @@ function SubmitButton({
 
 	if (!availableForSale) {
 		return (
-			<button disabled className={clsx(buttonClasses, disabledClasses)}>
+			<button type="button" disabled className={clsx(buttonClasses, disabledClasses)}>
 				Out Of Stock
 			</button>
 		);
@@ -30,6 +28,7 @@ function SubmitButton({
 	if (!selectedVariantId) {
 		return (
 			<button
+				type="button"
 				aria-label="Please select an option"
 				disabled
 				className={clsx(buttonClasses, disabledClasses)}
@@ -44,6 +43,7 @@ function SubmitButton({
 
 	return (
 		<button
+			type="submit"
 			aria-label="Add to cart"
 			className={clsx(buttonClasses, {
 				"hover:opacity-90": true,
@@ -57,38 +57,68 @@ function SubmitButton({
 	);
 }
 
-export function AddToCart({ product }: { product: Product }) {
-	const { variants, availableForSale } = product;
-	const { addCartItem } = useCart();
-	const { state } = useProduct();
-	const [message, formAction] = useActionState(addItem, null);
-
-	const variant = variants.find((variant: ProductVariant) =>
-		variant.selectedOptions.every(
-			(option) => option.value === state[option.name.toLowerCase()],
-		),
+export function AddToCart({ product }: { product: StoresProduct }) {
+	const { addItem, setIsOpen } = useCartActions();
+	const [selectedVariantId, setSelectedVariantId] = useState(
+		product.variations[0]?.id
 	);
-	const defaultVariantId = variants.length === 1 ? variants[0]?.id : undefined;
-	const selectedVariantId = variant?.id || defaultVariantId;
-	const addItemAction = formAction.bind(null, selectedVariantId);
-	const finalVariant = variants.find(
-		(variant) => variant.id === selectedVariantId,
-	)!;
+	const [quantity, setQuantity] = useState(1);
+
+	const selectedVariation = product.variations.find(
+		(v) => v.id === selectedVariantId
+	);
+	const availableForSale = selectedVariation?.quantity !== 0;
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		if (selectedVariantId) {
+			addItem(product, quantity, selectedVariantId);
+			setIsOpen(true);
+		}
+	};
 
 	return (
-		<form
-			action={async () => {
-				addCartItem(finalVariant, product);
-				addItemAction();
-			}}
-		>
+		<form onSubmit={handleSubmit} className="flex flex-col gap-4">
+			{product.variations.length > 0 && (
+				<div className="flex flex-col gap-2">
+					<label htmlFor="variation" className="text-sm font-medium">
+						Select Option
+					</label>
+					<select
+						id="variation"
+						value={selectedVariantId}
+						onChange={(e) => setSelectedVariantId(e.target.value)}
+						className="rounded-md border border-gray-300 px-4 py-2"
+					>
+						{product.variations.map((variation) => (
+							<option key={variation.id} value={variation.id}>
+								{variation.name}
+								{variation.quantity !== null &&
+									` (${variation.quantity} available)`}
+							</option>
+						))}
+					</select>
+				</div>
+			)}
+
+			<div className="flex flex-col gap-2">
+				<label htmlFor="quantity" className="text-sm font-medium">
+					Quantity
+				</label>
+				<input
+					type="number"
+					id="quantity"
+					min="1"
+					value={quantity}
+					onChange={(e) => setQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
+					className="rounded-md border border-gray-300 px-4 py-2"
+				/>
+			</div>
+
 			<SubmitButton
 				availableForSale={availableForSale}
 				selectedVariantId={selectedVariantId}
 			/>
-			<p aria-live="polite" className="sr-only" role="status">
-				{message}
-			</p>
 		</form>
 	);
 }

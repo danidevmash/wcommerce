@@ -1,3 +1,4 @@
+import { AddToCart } from '@/components/cart/add-to-cart';
 import { getStoresProduct } from '@/lib/stores-api';
 import { notFound } from 'next/navigation';
 
@@ -43,6 +44,8 @@ export default async function ProductPage({
               {product.description}
             </p>
           </div>
+
+          <AddToCart product={product} />
 
           {product.variations.length > 0 && (
             <div className="mb-6">

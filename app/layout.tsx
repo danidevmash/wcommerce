@@ -1,3 +1,4 @@
+import { CartProvider } from '@/app/components/cart/context';
 import { Inter } from 'next/font/google';
 import { Suspense } from 'react';
 import './globals.css';
@@ -17,9 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Suspense>
-          <main>{children}</main>
-        </Suspense>
+        <CartProvider>
+          <Suspense>
+            <main>{children}</main>
+          </Suspense>
+        </CartProvider>
       </body>
     </html>
   );
